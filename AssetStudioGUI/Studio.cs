@@ -850,25 +850,36 @@ namespace AssetStudioGUI
             ThreadPool.QueueUserWorkItem(state =>
             {
                 Progress.Reset();
-                Logger.Info($"Exporting {animator.Text}");
-                Logger.Debug($"Selected AnimationClip(s):\n\"{string.Join("\"\n\"", animationList.Select(x => x.Text))}\"");
+                Logger.Info($"Exporting {animator.Text} with {animationList.Count} AnimationClip(s)...");
+
                 try
                 {
-                    ExportAnimator(animator, exportPath, animationList);
+                    int current = 0;
+                    foreach (var clip in animationList)
+                    {
+                        var clipFolder = Path.Combine(exportPath, clip.Text);
+                        Directory.CreateDirectory(clipFolder);
+
+                        Logger.Info($"Exporting clip: {clip.Text} to {clipFolder}");
+
+                        ExportAnimator(animator, clipFolder, new List<AssetItem> { clip });
+                        Progress.Report(++current, animationList.Count);
+                    }
+
                     if (Properties.Settings.Default.openAfterExport)
                     {
                         OpenFolderInExplorer(exportPath);
                     }
-                    Progress.Report(1, 1);
-                    Logger.Info($"Finished exporting {animator.Text}");
+
+                    Logger.Info($"Finished exporting all clips for {animator.Text}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"Export Animator:{animator.Text} error", ex);
-                    Logger.Info("Error in export");
+                    Logger.Error($"Export Animator error for {animator.Text}", ex);
                 }
             });
         }
+
 
         public static void ExportObjectsWithAnimationClip(string exportPath, TreeNodeCollection nodes, List<AssetItem> animationList = null)
         {
